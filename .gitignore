@@ -1,0 +1,26 @@
+# Java / Spring Boot
+target/
+*.class
+*.jar
+
+# IntelliJ
+.idea/
+*.iml
+out/
+
+# Environment files and secrets
+.env
+.env.*
+application-local.properties
+application-secret.properties
+
+# Logs
+*.log
+
+# Node.js / React (for later)
+node_modules/
+dist/
+
+# Operating system
+.DS_Store
+Thumbs.db
