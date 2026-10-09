@@ -1,5 +1,8 @@
 
 package com.clearanceflow.backend.entity;
+import com.clearanceflow.backend.enums.CompanySize;
+import com.clearanceflow.backend.enums.Industry;
+import com.clearanceflow.backend.enums.ProjectType;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -18,10 +21,15 @@ public class Company {
     @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false)
-    private String sector;
+    @Enumerated(EnumType.STRING) //tells JPA to store enum names in PostgreSQL, such as MANUFACTURING, instead of integer positions
+    private Industry industry;
 
-    private String location;
 
-    private Integer employeeCount;
+    private String state;
+
+    @Enumerated(EnumType.STRING)
+    private CompanySize companySize;
+
+    @Enumerated(EnumType.STRING)
+    private ProjectType projectType;
 }
