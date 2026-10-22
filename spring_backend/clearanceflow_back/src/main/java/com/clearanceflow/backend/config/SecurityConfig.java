@@ -81,6 +81,19 @@ public class SecurityConfig {
                                 "/api/companies/*"
                         ).hasAnyRole("APPLICANT", "OFFICER")
 
+                                // Only officers can create approval catalogue entries
+                                .requestMatchers(
+                                        HttpMethod.POST,
+                                        "/api/approvals"
+                                ).hasRole("OFFICER")
+
+                                // Applicants and officers can view the approval catalogue
+                                .requestMatchers(
+                                        HttpMethod.GET,
+                                        "/api/approvals",
+                                        "/api/approvals/*"
+                                ).hasAnyRole("APPLICANT", "OFFICER")
+
                         // Require authentication for any remaining endpoints
                         .anyRequest().authenticated()
                 )
