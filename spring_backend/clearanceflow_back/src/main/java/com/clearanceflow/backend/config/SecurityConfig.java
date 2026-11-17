@@ -93,7 +93,10 @@ public class SecurityConfig {
                                         "/api/approvals",
                                         "/api/approvals/*"
                                 ).hasAnyRole("APPLICANT", "OFFICER")
-
+                                .requestMatchers(
+                                        HttpMethod.GET,
+                                        "/api/companies/*/required-approvals"
+                                ).hasRole("APPLICANT")
                         // Require authentication for any remaining endpoints
                         .anyRequest().authenticated()
                 )

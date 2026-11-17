@@ -82,6 +82,14 @@ public class CompanyService {
         return mapToResponseDTO(company);
     }
 
+    // GET COMPANY ENTITY AFTER CHECKING OWNERSHIP
+    public Company getAuthorizedCompany(Long id) {
+
+        checkCompanyOwnership(id);
+
+        return companyRepository.findById(id)
+                .orElseThrow(() -> new CompanyNotFoundException(id));
+    }
     // UPDATE COMPANY
     public CompanyResponseDTO updateCompany(Long id, CompanyRequestDTO request) {
 
