@@ -97,6 +97,26 @@ public class SecurityConfig {
                                         HttpMethod.GET,
                                         "/api/companies/*/required-approvals"
                                 ).hasRole("APPLICANT")
+                                // DAY 6: APPLICANT APPLICATION WORKFLOW
+
+                                // Create a draft application
+                                .requestMatchers(
+                                        HttpMethod.POST,
+                                        "/api/applications"
+                                ).hasRole("APPLICANT")
+
+                                // Submit an application
+                                .requestMatchers(
+                                        HttpMethod.POST,
+                                        "/api/applications/*/submit"
+                                ).hasRole("APPLICANT")
+
+                                // View own company's applications
+                                .requestMatchers(
+                                        HttpMethod.GET,
+                                        "/api/applications",
+                                        "/api/applications/*"
+                                ).hasRole("APPLICANT")
                         // Require authentication for any remaining endpoints
                         .anyRequest().authenticated()
                 )
