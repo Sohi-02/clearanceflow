@@ -33,6 +33,7 @@ public class ApplicationService {
     private final UserRepository userRepository;
     private final ComplianceService complianceService;
 
+    // CONSTRUCTOR DEPENDENCY INJECTION
     public ApplicationService(
             ApplicationRepository applicationRepository,
             ApprovalRepository approvalRepository,
@@ -44,6 +45,10 @@ public class ApplicationService {
         this.userRepository = userRepository;
         this.complianceService = complianceService;
     }
+
+    // =====================================================
+    // APPLICANT WORKFLOW
+    // =====================================================
 
     // GET LOGGED-IN APPLICANT'S COMPANY
     private Company getCurrentCompany() {
@@ -82,7 +87,7 @@ public class ApplicationService {
                         "Approval not found"
                 ));
 
-        // Only allow approvals matching this company's rules
+        // Check whether this approval applies to the company
         boolean applicable = complianceService
                 .getRequiredApprovals(company)
                 .stream()
@@ -119,7 +124,7 @@ public class ApplicationService {
                 .toList();
     }
 
-    // GET ONE APPLICATION
+    // GET ONE APPLICATION OWNED BY THE APPLICANT
     @Transactional(readOnly = true)
     public ApplicationResponseDTO getApplicationById(Long id) {
 
@@ -128,12 +133,13 @@ public class ApplicationService {
         return mapToResponseDTO(application);
     }
 
-    // SUBMIT APPLICATION
+    // SUBMIT DRAFT APPLICATION
     @Transactional
     public ApplicationResponseDTO submitApplication(Long id) {
 
         Application application = getOwnedApplication(id);
 
+        // Only DRAFT applications can be submitted
         if (application.getStatus() != ApplicationStatus.DRAFT) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
@@ -149,6 +155,7 @@ public class ApplicationService {
         int estimatedDays =
                 application.getApproval().getEstimatedDays();
 
+        // Calculate estimated processing deadline
         application.setDeadline(
                 submissionTime.plusDays(estimatedDays)
         );
@@ -158,7 +165,7 @@ public class ApplicationService {
         return mapToResponseDTO(saved);
     }
 
-    // CHECK OWNERSHIP BEFORE ACCESSING AN APPLICATION
+    // CHECK APPLICANT OWNERSHIP
     private Application getOwnedApplication(Long id) {
 
         Company company = getCurrentCompany();
@@ -179,7 +186,118 @@ public class ApplicationService {
         return application;
     }
 
-    // CONVERT ENTITY TO RESPONSE DTO
+    // =====================================================
+    // OFFICER WORKFLOW - DAY 7
+    // =====================================================
+
+    // OFFICER: VIEW APPLICATIONS AWAITING OR UNDER REVIEW
+    @Transactional(readOnly = true)
+    public List<ApplicationResponseDTO> getOfficerApplications() {
+
+        return applicationRepository.findByStatusIn(
+                        List.of(
+                                ApplicationStatus.SUBMITTED,
+                                ApplicationStatus.UNDER_REVIEW
+                        )
+                )
+                .stream()
+                .map(this::mapToResponseDTO)
+                .toList();
+    }
+
+    // OFFICER: VIEW AN INDIVIDUAL APPLICATION
+    @Transactional(readOnly = true)
+    public ApplicationResponseDTO getOfficerApplicationById(Long id) {
+
+        Application application = getReviewableApplication(id);
+
+        return mapToResponseDTO(application);
+    }
+
+    // OFFICER: START REVIEW
+    @Transactional
+    public ApplicationResponseDTO startReview(Long id) {
+
+        Application application = getReviewableApplication(id);
+
+        if (application.getStatus() != ApplicationStatus.SUBMITTED) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Only submitted applications can enter review"
+            );
+        }
+
+        application.setStatus(ApplicationStatus.UNDER_REVIEW);
+
+        Application saved = applicationRepository.save(application);
+
+        return mapToResponseDTO(saved);
+    }
+
+    // OFFICER: APPROVE APPLICATION
+    @Transactional
+    public ApplicationResponseDTO approveApplication(Long id) {
+
+        Application application = getReviewableApplication(id);
+
+        if (application.getStatus() != ApplicationStatus.UNDER_REVIEW) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Only applications under review can be approved"
+            );
+        }
+
+        application.setStatus(ApplicationStatus.APPROVED);
+
+        Application saved = applicationRepository.save(application);
+
+        return mapToResponseDTO(saved);
+    }
+
+    // OFFICER: REJECT APPLICATION
+    @Transactional
+    public ApplicationResponseDTO rejectApplication(Long id) {
+
+        Application application = getReviewableApplication(id);
+
+        if (application.getStatus() != ApplicationStatus.UNDER_REVIEW) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Only applications under review can be rejected"
+            );
+        }
+
+        application.setStatus(ApplicationStatus.REJECTED);
+
+        Application saved = applicationRepository.save(application);
+
+        return mapToResponseDTO(saved);
+    }
+
+    // HELPER: FETCH APPLICATION ACCESSIBLE TO OFFICERS
+    private Application getReviewableApplication(Long id) {
+
+        Application application = applicationRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Application not found"
+                ));
+
+        // Officers cannot access unsubmitted drafts
+        if (application.getStatus() == ApplicationStatus.DRAFT) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Officer cannot access draft applications"
+            );
+        }
+
+        return application;
+    }
+
+    // =====================================================
+    // COMMON HELPER: CONVERT ENTITY TO RESPONSE DTO
+    // =====================================================
+
     private ApplicationResponseDTO mapToResponseDTO(
             Application application) {
 

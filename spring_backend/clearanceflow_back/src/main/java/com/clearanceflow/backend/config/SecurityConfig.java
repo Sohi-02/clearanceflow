@@ -117,7 +117,14 @@ public class SecurityConfig {
                                         "/api/applications",
                                         "/api/applications/*"
                                 ).hasRole("APPLICANT")
-                        // Require authentication for any remaining endpoints
+
+                                // DAY 7: OFFICER APPLICATION WORKFLOW
+                                .requestMatchers(
+                                        "/api/officer/applications",
+                                        "/api/officer/applications/**"
+                                ).hasRole("OFFICER")
+
+                                // Require authentication for any remaining endpoints
                         .anyRequest().authenticated()
                 )
 
