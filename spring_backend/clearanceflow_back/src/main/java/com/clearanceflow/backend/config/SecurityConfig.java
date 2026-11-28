@@ -123,6 +123,33 @@ public class SecurityConfig {
                                         "/api/officer/applications",
                                         "/api/officer/applications/**"
                                 ).hasRole("OFFICER")
+                                // DAY 8: ONLY APPLICANTS CAN UPLOAD DOCUMENTS
+                                .requestMatchers(
+                                        HttpMethod.POST,
+                                        "/api/applications/*/documents"
+                                ).hasRole("APPLICANT")
+
+                                .requestMatchers(
+                                        HttpMethod.POST,
+                                        "/api/applications/*/documents"
+                                ).hasRole("APPLICANT")
+
+                                .requestMatchers(
+                                        HttpMethod.GET,
+                                        "/api/applications/*/documents"
+                                ).hasRole("APPLICANT")
+                                .requestMatchers(
+                                        HttpMethod.GET,
+                                        "/api/applications/*/documents/*/download"
+                                ).hasRole("APPLICANT")
+                                .requestMatchers(
+                                        HttpMethod.DELETE,
+                                        "/api/applications/*/documents/*"
+                                ).hasRole("APPLICANT")
+                                .requestMatchers(
+                                        HttpMethod.GET,
+                                        "/api/approvals/*/required-documents"
+                                ).hasAnyRole("APPLICANT", "OFFICER")
 
                                 // Require authentication for any remaining endpoints
                         .anyRequest().authenticated()

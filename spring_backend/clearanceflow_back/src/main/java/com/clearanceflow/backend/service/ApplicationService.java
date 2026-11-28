@@ -15,6 +15,10 @@ import com.clearanceflow.backend.enums.ApplicationStatus;
 import com.clearanceflow.backend.repository.ApplicationRepository;
 import com.clearanceflow.backend.repository.ApprovalRepository;
 import com.clearanceflow.backend.repository.UserRepository;
+import com.clearanceflow.backend.entity.ApprovalDocumentRequirement;
+import com.clearanceflow.backend.repository.ApprovalDocumentRequirementRepository;
+import com.clearanceflow.backend.repository.DocumentRepository;
+
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -32,18 +36,24 @@ public class ApplicationService {
     private final ApprovalRepository approvalRepository;
     private final UserRepository userRepository;
     private final ComplianceService complianceService;
+    private final ApprovalDocumentRequirementRepository requirementRepository;
+    private final DocumentRepository documentRepository;
 
     // CONSTRUCTOR DEPENDENCY INJECTION
     public ApplicationService(
             ApplicationRepository applicationRepository,
             ApprovalRepository approvalRepository,
             UserRepository userRepository,
-            ComplianceService complianceService) {
+            ComplianceService complianceService,
+            ApprovalDocumentRequirementRepository requirementRepository,
+            DocumentRepository documentRepository) {
 
         this.applicationRepository = applicationRepository;
         this.approvalRepository = approvalRepository;
         this.userRepository = userRepository;
         this.complianceService = complianceService;
+        this.requirementRepository = requirementRepository;
+        this.documentRepository = documentRepository;
     }
 
     // =====================================================
@@ -146,6 +156,38 @@ public class ApplicationService {
                     "Only DRAFT applications can be submitted"
             );
         }
+
+// CHECK MANDATORY DOCUMENTS BEFORE SUBMISSION
+
+        Long approvalId = application.getApproval().getId();
+
+// Get document requirements for this approval
+        List<ApprovalDocumentRequirement> requirements =
+                requirementRepository.findByApprovalId(approvalId);
+
+// Identify missing mandatory documents
+        List<String> missingDocuments = requirements.stream()
+                .filter(ApprovalDocumentRequirement::isRequired)
+                .map(ApprovalDocumentRequirement::getDocumentType)
+                .filter(documentType ->
+                        documentRepository
+                                .findByApplicationIdAndDocumentType(
+                                        application.getId(),
+                                        documentType
+                                )
+                                .isEmpty()
+                )
+                .toList();
+
+        // Block submission if mandatory documents are missing
+        if (!missingDocuments.isEmpty()) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Missing required documents: " + missingDocuments
+            );
+        }
+
 
         LocalDateTime submissionTime = LocalDateTime.now();
 
